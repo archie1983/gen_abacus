@@ -29,10 +29,25 @@ def gen_numbers(how_many_numbers = 4, max_number = 5, max_sum = 15, use_negative
     if max_sum <= max_number:
         max_sum = max_number + 1
 
-    # Generate required number of numbers
+    # Generate required count of numbers
     for cnt in range(how_many_numbers):
         numbers.append(gen_non_zero(max_number, use_negative))
 
+    # now that we have all the necessary numbers, all that's left is to
+    # enforce the max_sum constraint.
+    numbers = enforce_max_sum(numbers, max_number, max_sum, use_negative, answer_can_be_negative)
+
+    numbers.sort()
+    return numbers
+
+#
+# numbers: a row of numbers to optimize
+# max_number : maximum giving us numbers in range [-max_number, max_number]
+# max_sum : maximum sum that the generated numbers must add up to
+# use_negative : do we want to use negative numbers
+# answer_can_be_negative : do we want to have exercises with negative answer
+#
+def enforce_max_sum(numbers = [], max_number = 10, max_sum = 100, use_negative = False, answer_can_be_negative = False):
     # now that we have all the necessary numbers, all that's left is to
     # enforce the max_sum constraint.
     g_changed = True
@@ -69,8 +84,6 @@ def gen_numbers(how_many_numbers = 4, max_number = 5, max_sum = 15, use_negative
             if (number_to_increase == 0): # if we got it to 0, then re-generate
                 number_to_increase = gen_non_zero(max_number, use_negative)
             numbers.append(number_to_increase)
-            
-    numbers.sort()
     return numbers
 
 def gen_non_zero(max_number, use_negative = False):
@@ -86,7 +99,12 @@ def gen_non_zero(max_number, use_negative = False):
             tmp_num = r.randint(1, max_number)
     return tmp_num
 
-def gen_abacus(number_of_exercises = 3, how_many_numbers = 4, max_number = 5, max_sum = 15, use_negative = True, answer_can_be_negative = False):
+def gen_abacus(number_of_exercises = 3,
+                how_many_numbers = 4,
+                max_number = 5,
+                max_sum = 15,
+                use_negative = True,
+                answer_can_be_negative = False):
     for i in range(number_of_exercises):
         numbers = gen_numbers(how_many_numbers, max_number, max_sum, use_negative, answer_can_be_negative)
         print("-------------------")
@@ -101,3 +119,11 @@ def gen_abacus(number_of_exercises = 3, how_many_numbers = 4, max_number = 5, ma
 print(gen_abacus(3, 2, 4, 4, True, False))
 #print(gen_abacus(3, 3, 5, 15, True, False))
 #print(gen_abacus(3, 5, 7, 25, True, False))
+
+# Rule : 2-digit number only first
+# in 2 digit number both digits no more than x = [1..9]
+# one of the numbers must be x
+# both answer digits in a 2 digit number are no more than x
+# contains x for rules like: +4 = +5 - 1 (for x = 4)
+# only 1 or 2 numbers are negative and first number is positive
+# specify count of double digit numbers
