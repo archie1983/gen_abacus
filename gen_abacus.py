@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import random as r
+import copy as c
 
 #
 # Generates a sequence of numbers that can be then used for creating an abacus
@@ -9,10 +10,12 @@ import random as r
 # how_many_numbers : how many numbers to generate
 # max_number : maximum giving us numbers in range [-max_number, max_number]
 # max_sum : maximum sum that the generated numbers must add up to
+# buffer_prefill : numbers that must be present in the final list
 # use_negative : do we want to use negative numbers
 # answer_can_be_negative : do we want to have exercises with negative answer
 #
-def gen_numbers(how_many_numbers = 4, max_number = 5, max_sum = 15, use_negative = True, answer_can_be_negative = True):
+# NOTE: ATM it is assumed that both max_number and max_sum are positive.
+def gen_numbers(how_many_numbers = 4, max_number = 5, max_sum = 15, buffer_prefill = [], use_negative = True, answer_can_be_negative = True):
     # We'll store numbers here.
     numbers = []
 
@@ -29,6 +32,13 @@ def gen_numbers(how_many_numbers = 4, max_number = 5, max_sum = 15, use_negative
     if max_sum <= max_number:
         max_sum = max_number + 1
 
+    # if we need to have something prefilled in the buffer (e.g. to force end
+    # user to use some abacus formula), then we need to make adjustments to
+    # start variables to take that into account.
+    if (len(buffer_prefill) > 0):
+         max_sum -= sum(buffer_prefill)
+         how_many_numbers -= len(buffer_prefill)
+
     # Generate required count of numbers
     for cnt in range(how_many_numbers):
         numbers.append(gen_non_zero(max_number, use_negative))
@@ -37,9 +47,41 @@ def gen_numbers(how_many_numbers = 4, max_number = 5, max_sum = 15, use_negative
     # enforce the max_sum constraint.
     numbers = enforce_max_sum(numbers, max_number, max_sum, use_negative, answer_can_be_negative)
 
-    numbers.sort()
+    # We have to make sure that our list doesn't start with a negative number.
+    # For that we'll find first positive number and re-make the list so that
+    # the found positive number is at the beginning.
+    numbers = enforce_positive_number_first(numbers, how_many_numbers, max_number)
+
+    # if we have to have something in the numbers list, then adding that
+    if (len(buffer_prefill) > 0):
+        for cnt in range(len(buffer_prefill)):
+            numbers.append(buffer_prefill[cnt])
+
     return numbers
 
+def enforce_positive_number_first(numbers=[-1,2,3], how_many_numbers = 4, max_number = 5):
+    # We have to make sure that our list doesn't start with a negative number.
+    # For that we'll find first positive number and re-make the list so that
+    # the found positive number is at the beginning.
+    pos_loc = -1
+    for cnt in range(how_many_numbers):
+        if numbers[cnt] > 0:
+            pos_loc = cnt
+            break
+
+    if (pos_loc > -1):
+        numbers = numbers[pos_loc:] + numbers[:pos_loc]
+    else:
+        # if there are no positive numbers at all, then make the first positive
+        # and subtract from all others equally
+        first_num = gen_non_zero(max_number, False)
+        numbers[0] = first_num
+        for cnt in range(1, how_many_numbers):
+            if first_num > 0:
+                numbers[cnt] -= 1
+                first_num -= 1
+    return numbers
+    
 #
 # numbers: a row of numbers to optimize
 # max_number : maximum giving us numbers in range [-max_number, max_number]
@@ -103,10 +145,11 @@ def gen_abacus(number_of_exercises = 3,
                 how_many_numbers = 4,
                 max_number = 5,
                 max_sum = 15,
+                buffer_prefill = [],
                 use_negative = True,
                 answer_can_be_negative = False):
     for i in range(number_of_exercises):
-        numbers = gen_numbers(how_many_numbers, max_number, max_sum, use_negative, answer_can_be_negative)
+        numbers = gen_numbers(how_many_numbers, max_number, max_sum, buffer_prefill, use_negative, answer_can_be_negative)
         print("-------------------")
 
         for cnt in range(len(numbers)):
@@ -116,7 +159,7 @@ def gen_abacus(number_of_exercises = 3,
         print(sum(numbers))
 
 
-print(gen_abacus(3, 2, 4, 4, True, False))
+print(gen_abacus(3, 2, 4, 4, [], True, False))
 #print(gen_abacus(3, 3, 5, 15, True, False))
 #print(gen_abacus(3, 5, 7, 25, True, False))
 
