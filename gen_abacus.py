@@ -2,6 +2,7 @@
 
 import random as r
 import copy as c
+import math as m
 
 #
 # Generates a sequence of numbers that can be then used for creating an abacus
@@ -10,12 +11,22 @@ import copy as c
 # how_many_numbers : how many numbers to generate
 # max_number : maximum giving us numbers in range [-max_number, max_number]
 # max_sum : maximum sum that the generated numbers must add up to
+# first_number_digit_count : how many digits we want in the first number (0 - don't care)
 # buffer_prefill : numbers that must be present in the final list
 # use_negative : do we want to use negative numbers
 # answer_can_be_negative : do we want to have exercises with negative answer
 #
 # NOTE: ATM it is assumed that both max_number and max_sum are positive.
-def gen_numbers(how_many_numbers = 4, max_number = 5, max_sum = 15, buffer_prefill = [], use_negative = True, answer_can_be_negative = True):
+# NOTE: If we're using first_number_digit_count > 1, then that's a separate
+#       number that will be added to the front of the final list. It will NOT
+#       be affected by max_number constraint.
+def gen_numbers(how_many_numbers = 4,
+                max_number = 5,
+                max_sum = 15,
+                first_number_digit_count = 2,
+                buffer_prefill = [],
+                use_negative = True,
+                answer_can_be_negative = True):
     # We'll store numbers here.
     numbers = []
 
@@ -52,7 +63,16 @@ def gen_numbers(how_many_numbers = 4, max_number = 5, max_sum = 15, buffer_prefi
     # the found positive number is at the beginning.
     numbers = enforce_positive_number_first(numbers, how_many_numbers, max_number)
 
-    # if we have to have something in the numbers list, then adding that
+    # if we want the first number to have certain number of digits, then
+    # generate those digits now and try to keep enforcement of max sum.
+    if (first_number_digit_count > 0):
+        prev_first_number = numbers[0]
+        new_first_number = 0
+        for cnt in range(first_number_digit_count):
+            new_first_number = new_first_number * 10 + gen_non_zero(9, False)
+
+    # if we have to have something in the numbers list, then adding that to the
+    # end of the list.
     if (len(buffer_prefill) > 0):
         for cnt in range(len(buffer_prefill)):
             numbers.append(buffer_prefill[cnt])
@@ -75,13 +95,43 @@ def enforce_positive_number_first(numbers=[-1,2,3], how_many_numbers = 4, max_nu
         # if there are no positive numbers at all, then make the first positive
         # and subtract from all others equally
         first_num = gen_non_zero(max_number, False)
+        difference = first_num - numbers[0]
+        subtractor = m.ceil(difference / (how_many_numbers - 1))
         numbers[0] = first_num
         for cnt in range(1, how_many_numbers):
-            if first_num > 0:
-                numbers[cnt] -= 1
-                first_num -= 1
+            if difference > 0:
+                numbers[cnt] -= subtractor
+                difference -= subtractor
     return numbers
-    
+
+#
+# Will try to enforce a given first number in the list retaining max_sum constraint.
+#
+def enforce_given_number_first(numbers=[-1,2,3], how_many_numbers = 4, max_number = 5):
+    # We have to make sure that our list doesn't start with a negative number.
+    # For that we'll find first positive number and re-make the list so that
+    # the found positive number is at the beginning.
+    pos_loc = -1
+    for cnt in range(how_many_numbers):
+        if numbers[cnt] > 0:
+            pos_loc = cnt
+            break
+
+    if (pos_loc > -1):
+        numbers = numbers[pos_loc:] + numbers[:pos_loc]
+    else:
+        # if there are no positive numbers at all, then make the first positive
+        # and subtract from all others equally
+        first_num = gen_non_zero(max_number, False)
+        difference = first_num - numbers[0]
+        subtractor = m.ceil(difference / (how_many_numbers - 1))
+        numbers[0] = first_num
+        for cnt in range(1, how_many_numbers):
+            if difference > 0:
+                numbers[cnt] -= subtractor
+                difference -= subtractor
+    return numbers
+
 #
 # numbers: a row of numbers to optimize
 # max_number : maximum giving us numbers in range [-max_number, max_number]
@@ -106,7 +156,7 @@ def enforce_max_sum(numbers = [], max_number = 10, max_sum = 100, use_negative =
                 g_changed = True
                 number_to_reduce -= 1
             else:
-                if number_to_reduce == 0: # if it's too small already, then re-generate
+                if number_to_reduce == 0: # if it's too small already, then re-generate it and continue the enforcement process
                     number_to_reduce = gen_non_zero(max_number, use_negative)
 
             numbers.append(number_to_reduce)
@@ -145,11 +195,18 @@ def gen_abacus(number_of_exercises = 3,
                 how_many_numbers = 4,
                 max_number = 5,
                 max_sum = 15,
+                first_number_digit_count = 2,
                 buffer_prefill = [],
                 use_negative = True,
                 answer_can_be_negative = False):
     for i in range(number_of_exercises):
-        numbers = gen_numbers(how_many_numbers, max_number, max_sum, buffer_prefill, use_negative, answer_can_be_negative)
+        numbers = gen_numbers(how_many_numbers,
+                            max_number,
+                            max_sum,
+                            first_number_digit_count,
+                            buffer_prefill,
+                            use_negative,
+                            answer_can_be_negative)
         print("-------------------")
 
         for cnt in range(len(numbers)):
@@ -159,14 +216,16 @@ def gen_abacus(number_of_exercises = 3,
         print(sum(numbers))
 
 
-print(gen_abacus(3, 2, 4, 4, [], True, False))
+#print(gen_abacus(3, 2, 4, 4, [], True, False))
+print(gen_abacus(3, 3, 6, 14, 2, [4], True, False))
 #print(gen_abacus(3, 3, 5, 15, True, False))
 #print(gen_abacus(3, 5, 7, 25, True, False))
 
 # Rule : 2-digit number only first
 # in 2 digit number both digits no more than x = [1..9]
-# one of the numbers must be x
+# DONE: one of the numbers must be x
 # both answer digits in a 2 digit number are no more than x
-# contains x for rules like: +4 = +5 - 1 (for x = 4)
-# only 1 or 2 numbers are negative and first number is positive
+# DONE: contains x for rules like: +4 = +5 - 1 (for x = 4)
+# only 1 or 2 numbers are negative
+# DONE: first number is positive
 # specify count of double digit numbers
