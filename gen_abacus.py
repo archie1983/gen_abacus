@@ -140,6 +140,84 @@ def enforce_given_number_first(numbers=[-1,2,3], how_many_numbers = 4, max_numbe
 # answer_can_be_negative : do we want to have exercises with negative answer
 #
 def enforce_max_sum(numbers = [], max_number = 10, max_sum = 100, use_negative = False, answer_can_be_negative = False):
+    # first let's establish the minimum bound
+    if answer_can_be_negative:
+        min_sum = -1 * max_sum
+    else:
+        min_sum = 0
+
+    # To avoid eternal cycles, we'll use these vars.
+    row_changed = True
+    number_changed = False
+
+    # first get it below the uppoer bound
+    while (sum(numbers) > max_sum and row_changed):
+        # figure out how much is over and subtract equal share from each number in the row.
+        difference = sum(numbers) - max_sum
+        subtractor = m.ceil(difference / len(numbers))
+        for cnt in range(len(numbers)):
+            number_changed = False
+            # if we're not allowed to use negative numbers then make sure that we don't
+            # and only optimize if difference is still there.
+            if difference > 0:
+                numbers[cnt] -= subtractor
+                difference -= subtractor
+                number_changed = True
+                # if we ended up with 0 and are allowed to use negative numbers, then reduce further
+                # but if negative numbers are not allowed, then make it 1 and carry on.
+                if (numbers[cnt] == 0):
+                    if use_negative:
+                        numbers[cnt] -= 1
+                        difference -= 1
+                    else:
+                        numbers[cnt] += 1
+                        difference += 1
+                        if subtractor == 1:
+                            number_changed = False
+                else: # but if we ended up less than 0 and are not allowed negative numbers, then restore.
+                    if (numbers[cnt] < 0 and not use_negative):
+                        numbers[cnt] += subtractor
+                        difference += subtractor
+                        number_changed = False
+            # if there were changes, then we'll need to rerun it again if we're still below threshold
+            if number_changed:
+                row_changed = True
+
+    row_changed = True
+    number_changed = False
+    # now get it above the lower bound
+    while (sum(numbers) < min_sum):
+        # figure out how much is below and add equal share to each number in the row.
+        difference = min_sum - sum(numbers)
+        to_add = m.ceil(difference / len(numbers))
+        for cnt in range(len(numbers)):
+            number_changed = False
+            # only make changes if difference is still there
+            if difference > 0:
+                numbers[cnt] += to_add
+                difference -= to_add
+                number_changed = True
+                # if we got 0, then continue increasing
+                if numbers[cnt] == 0:
+                    numbers[cnt] += 1
+                    difference -= 1
+                # if we got more than max_number, then adjust
+                if numbers[cnt] > max_number:
+                    difference += numbers[cnt] - max_number
+                    numbers[cnt] = max_number
+                    if to_add == max_number:
+                        number_changed = False
+
+    return numbers
+
+#
+# numbers: a row of numbers to optimize
+# max_number : maximum giving us numbers in range [-max_number, max_number]
+# max_sum : maximum sum that the generated numbers must add up to
+# use_negative : do we want to use negative numbers
+# answer_can_be_negative : do we want to have exercises with negative answer
+#
+def enforce_max_sum(numbers = [], max_number = 10, max_sum = 100, use_negative = False, answer_can_be_negative = False):
     # now that we have all the necessary numbers, all that's left is to
     # enforce the max_sum constraint.
     g_changed = True
