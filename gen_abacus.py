@@ -13,6 +13,7 @@ import math as m
 # max_sum : maximum sum that the generated numbers must add up to
 # first_number_digit_count : how many digits we want in the first number (0 - don't care)
 # max_digit_in_multi_digit_number : what is the maximum digit that we want in the multi digit number (the one at the front of the row)
+# max_answer_digit : maximum digit in the answer (e.g. if this value is 4 and max_sum=100, then max_sum really is 44 and answer can be 34, 32, etc, but not 39 for instance.)
 # buffer_prefill : numbers that must be present in the final list
 # use_negative : do we want to use negative numbers
 # answer_can_be_negative : do we want to have exercises with negative answer
@@ -23,6 +24,7 @@ def gen_numbers(how_many_numbers = 4,
                 max_sum = 15,
                 first_number_digit_count = 2,
                 max_digit_in_multi_digit_number = 8,
+                max_answer_digit = 8,
                 buffer_prefill = [],
                 use_negative = True,
                 answer_can_be_negative = True):
@@ -41,6 +43,28 @@ def gen_numbers(how_many_numbers = 4,
     # input sanity
     if max_sum <= max_number:
         max_sum = max_number + 1
+    # sanitize input
+    if max_answer_digit > 9 or max_answer_digit < 0:
+        max_answer_digit = 9
+
+    # if max_answer_digit > 0 then we may need to re-calculate max_sum
+    if max_answer_digit > 0:
+        # first find out the max digit count in max_sum
+        max_sum_digit_count = 0
+        while 10 ** max_sum_digit_count < max_sum:
+            max_sum_digit_count += 1
+
+        # now find the most significant number in the max_sum
+        most_significant_number_in_max_sum = m.floor(max_sum / (10 ** (max_sum_digit_count - 1)))
+
+        # max bound of max_sum if we obey max_answer_digit
+        max_bound_of_max_sum_with_digits = sum([max_answer_digit * 10 ** i for i in range(max_sum_digit_count)])
+
+        if max_sum > max_bound_of_max_sum_with_digits:
+            max_sum = max_bound_of_max_sum_with_digits
+        # Now our max_sum will be something like 444 if max_answer_digit = 4 and initial max_sum was greater than 444.
+        # That still doesn't guarantee that our result will obey max_answer_digit. It could be for instance 349 or 299,
+        # so at the moment only the most significant digit will be strictly obeying max_answer_digit rule.
 
     # if we need to have something prefilled in the buffer (e.g. to force end
     # user to use some abacus formula), then we need to make adjustments to
@@ -62,6 +86,8 @@ def gen_numbers(how_many_numbers = 4,
     # enforce the max_sum constraint.
     numbers = enforce_max_sum(numbers, max_number, max_sum, use_negative, answer_can_be_negative)
 
+    # if we need a specific first number (of specific digit count), then enforcing that
+    # keeping max_sum constraint (the function called will obey max_sum constraint).
     if first_number_digit_count > 0:
         numbers = enforce_given_number_first(first_number_digit_count, max_digit_in_multi_digit_number, numbers, max_number, max_sum, use_negative, answer_can_be_negative)
 
@@ -236,6 +262,7 @@ def gen_abacus(number_of_exercises = 3,
                 max_sum = 15,
                 first_number_digit_count = 2,
                 max_digit_in_multi_digit_number = 8,
+                max_answer_digit = 8,
                 buffer_prefill = [],
                 use_negative = True,
                 answer_can_be_negative = False):
@@ -245,6 +272,7 @@ def gen_abacus(number_of_exercises = 3,
                             max_sum,
                             first_number_digit_count,
                             max_digit_in_multi_digit_number,
+                            max_answer_digit,
                             buffer_prefill,
                             use_negative,
                             answer_can_be_negative)
