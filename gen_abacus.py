@@ -54,22 +54,17 @@ def gen_numbers(how_many_numbers = 4,
     for cnt in range(how_many_numbers):
         numbers.append(gen_non_zero(max_number, use_negative))
 
+    # We have to make sure that our list doesn't start with a negative number.
+    # For that we'll find first positive number and re-make the list so that
+    # the found positive number is at the beginning.
+    numbers = enforce_positive_number_first(numbers, max_number)
+
     # now that we have all the necessary numbers, all that's left is to
     # enforce the max_sum constraint.
     numbers = enforce_max_sum(numbers, max_number, max_sum, use_negative, answer_can_be_negative)
 
-    # We have to make sure that our list doesn't start with a negative number.
-    # For that we'll find first positive number and re-make the list so that
-    # the found positive number is at the beginning.
-    numbers = enforce_positive_number_first(numbers, how_many_numbers, max_number)
-
-    # if we want the first number to have certain number of digits, then
-    # generate those digits now and try to keep enforcement of max sum.
-    if (first_number_digit_count > 0):
-        prev_first_number = numbers[0]
-        new_first_number = 0
-        for cnt in range(first_number_digit_count):
-            new_first_number = new_first_number * 10 + gen_non_zero(9, False)
+    if first_number_digit_count > 0:
+        numbers = enforce_given_number_first(first_number_digit_count, numbers, max_number, max_sum, use_negative, answer_can_be_negative)
 
     # if we have to have something in the numbers list, then adding that to the
     # end of the list.
@@ -79,12 +74,12 @@ def gen_numbers(how_many_numbers = 4,
 
     return numbers
 
-def enforce_positive_number_first(numbers=[-1,2,3], how_many_numbers = 4, max_number = 5):
+def enforce_positive_number_first(numbers=[-1,2,3], max_number = 5):
     # We have to make sure that our list doesn't start with a negative number.
     # For that we'll find first positive number and re-make the list so that
     # the found positive number is at the beginning.
     pos_loc = -1
-    for cnt in range(how_many_numbers):
+    for cnt in range(len(numbers)):
         if numbers[cnt] > 0:
             pos_loc = cnt
             break
@@ -95,41 +90,44 @@ def enforce_positive_number_first(numbers=[-1,2,3], how_many_numbers = 4, max_nu
         # if there are no positive numbers at all, then make the first positive
         # and subtract from all others equally
         first_num = gen_non_zero(max_number, False)
-        difference = first_num - numbers[0]
-        subtractor = m.ceil(difference / (how_many_numbers - 1))
         numbers[0] = first_num
-        for cnt in range(1, how_many_numbers):
-            if difference > 0:
-                numbers[cnt] -= subtractor
-                difference -= subtractor
     return numbers
 
 #
 # Will try to enforce a given first number in the list retaining max_sum constraint.
 #
-def enforce_given_number_first(numbers=[-1,2,3], how_many_numbers = 4, max_number = 5):
-    # We have to make sure that our list doesn't start with a negative number.
-    # For that we'll find first positive number and re-make the list so that
-    # the found positive number is at the beginning.
-    pos_loc = -1
-    for cnt in range(how_many_numbers):
-        if numbers[cnt] > 0:
-            pos_loc = cnt
-            break
+def enforce_given_number_first(first_number_digit_count, numbers = [], max_number = 10, max_sum = 100, use_negative = False, answer_can_be_negative = False):
+    # if we want the first number to have certain number of digits, then
+    # generate those digits now and try to keep enforcement of max sum.
+    if (first_number_digit_count > 0):
+        prev_first_number = numbers[0]
+        new_first_number = 0
+        # we'll generate a multi-digit number, but to make sure that max_sum remains
+        # enforceable, this new number needs to be less than max_sum and leave at least
+        # a value of 1 (better 5) for each of the remaining numbers.
+        multi_digit_number_upper_bound = max_sum - 1 * (len(numbers) - 1)
 
-    if (pos_loc > -1):
-        numbers = numbers[pos_loc:] + numbers[:pos_loc]
-    else:
-        # if there are no positive numbers at all, then make the first positive
-        # and subtract from all others equally
-        first_num = gen_non_zero(max_number, False)
-        difference = first_num - numbers[0]
-        subtractor = m.ceil(difference / (how_many_numbers - 1))
-        numbers[0] = first_num
-        for cnt in range(1, how_many_numbers):
-            if difference > 0:
-                numbers[cnt] -= subtractor
-                difference -= subtractor
+        # and of course the lower bound for multi-digit number must be 10 ^ (first_number_digit_count - 1)
+        # so that for example if we want to generate a 3 digit number, then we generate at least 100.
+        # We may want to change this in the future through a parameter.
+        multi_digit_number_lower_bound = 10 ** (first_number_digit_count - 1)
+
+        #print(multi_digit_number_lower_bound, " : ", multi_digit_number_upper_bound, " : ", len(numbers), " : ", max_sum)
+        # making sure that generation will be sane.
+        if (multi_digit_number_upper_bound > multi_digit_number_lower_bound):
+            # making sure that it will go at least once through the cycle
+            new_first_number = multi_digit_number_upper_bound + 1
+            while new_first_number > multi_digit_number_upper_bound or new_first_number < multi_digit_number_lower_bound:
+                new_first_number = 0
+                for cnt in range(first_number_digit_count):
+                    new_first_number = new_first_number * 10 + gen_non_zero(9, False)
+
+            numbers[0] = new_first_number
+
+        # The first number is now with the required digit count.
+        # Now we need to enforce the max_sum on this new row of numbers.
+        max_sum_for_remainder_of_row = max_sum + prev_first_number - new_first_number
+        numbers = numbers[:1] + enforce_max_sum(numbers[1:], max_number, max_sum_for_remainder_of_row, use_negative, answer_can_be_negative)
     return numbers
 
 #
@@ -210,52 +208,6 @@ def enforce_max_sum(numbers = [], max_number = 10, max_sum = 100, use_negative =
 
     return numbers
 
-#
-# numbers: a row of numbers to optimize
-# max_number : maximum giving us numbers in range [-max_number, max_number]
-# max_sum : maximum sum that the generated numbers must add up to
-# use_negative : do we want to use negative numbers
-# answer_can_be_negative : do we want to have exercises with negative answer
-#
-def enforce_max_sum(numbers = [], max_number = 10, max_sum = 100, use_negative = False, answer_can_be_negative = False):
-    # now that we have all the necessary numbers, all that's left is to
-    # enforce the max_sum constraint.
-    g_changed = True
-    while g_changed:
-        g_changed = False
-        changed = True
-        # enforcing the sum to be less than or equal to max_sum
-        while (sum(numbers) > max_sum and changed):
-            changed = False
-            numbers.sort()
-            number_to_reduce = numbers.pop()
-            if number_to_reduce > 1 or use_negative: # if it can be reduced then reduce
-                changed = True
-                g_changed = True
-                number_to_reduce -= 1
-            else:
-                if number_to_reduce == 0: # if it's too small already, then re-generate it and continue the enforcement process
-                    number_to_reduce = gen_non_zero(max_number, use_negative)
-
-            numbers.append(number_to_reduce)
-
-        # Now enforcing that sum is greater than -1 * max_sum or greater than 0
-        if answer_can_be_negative:
-            min_sum = -1 * max_sum
-        else:
-            min_sum = 0
-
-        #print(sum(numbers), " < ", min_sum)
-        while (sum(numbers) < min_sum):
-            numbers.sort()
-            number_to_increase = numbers.pop(0)
-            g_changed = True
-            number_to_increase += 1
-            if (number_to_increase == 0): # if we got it to 0, then re-generate
-                number_to_increase = gen_non_zero(max_number, use_negative)
-            numbers.append(number_to_increase)
-    return numbers
-
 def gen_non_zero(max_number, use_negative = False):
     # We don't normally want to generate 0-es, so if we get one, then
     # let's re-generate. Also re-generate if this is the last number
@@ -295,11 +247,11 @@ def gen_abacus(number_of_exercises = 3,
 
 
 #print(gen_abacus(3, 2, 4, 4, [], True, False))
-print(gen_abacus(3, 3, 6, 14, 2, [4], True, False))
+print(gen_abacus(3, 3, 6, 24, 2, [4], True, False))
 #print(gen_abacus(3, 3, 5, 15, True, False))
 #print(gen_abacus(3, 5, 7, 25, True, False))
 
-# Rule : 2-digit number only first
+# DONE: Rule : 2-digit number only first
 # in 2 digit number both digits no more than x = [1..9]
 # DONE: one of the numbers must be x
 # both answer digits in a 2 digit number are no more than x
