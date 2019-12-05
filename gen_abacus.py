@@ -12,18 +12,17 @@ import math as m
 # max_number : maximum giving us numbers in range [-max_number, max_number]
 # max_sum : maximum sum that the generated numbers must add up to
 # first_number_digit_count : how many digits we want in the first number (0 - don't care)
+# max_digit_in_multi_digit_number : what is the maximum digit that we want in the multi digit number (the one at the front of the row)
 # buffer_prefill : numbers that must be present in the final list
 # use_negative : do we want to use negative numbers
 # answer_can_be_negative : do we want to have exercises with negative answer
 #
 # NOTE: ATM it is assumed that both max_number and max_sum are positive.
-# NOTE: If we're using first_number_digit_count > 1, then that's a separate
-#       number that will be added to the front of the final list. It will NOT
-#       be affected by max_number constraint.
 def gen_numbers(how_many_numbers = 4,
                 max_number = 5,
                 max_sum = 15,
                 first_number_digit_count = 2,
+                max_digit_in_multi_digit_number = 8,
                 buffer_prefill = [],
                 use_negative = True,
                 answer_can_be_negative = True):
@@ -64,7 +63,7 @@ def gen_numbers(how_many_numbers = 4,
     numbers = enforce_max_sum(numbers, max_number, max_sum, use_negative, answer_can_be_negative)
 
     if first_number_digit_count > 0:
-        numbers = enforce_given_number_first(first_number_digit_count, numbers, max_number, max_sum, use_negative, answer_can_be_negative)
+        numbers = enforce_given_number_first(first_number_digit_count, max_digit_in_multi_digit_number, numbers, max_number, max_sum, use_negative, answer_can_be_negative)
 
     # if we have to have something in the numbers list, then adding that to the
     # end of the list.
@@ -96,16 +95,26 @@ def enforce_positive_number_first(numbers=[-1,2,3], max_number = 5):
 #
 # Will try to enforce a given first number in the list retaining max_sum constraint.
 #
-def enforce_given_number_first(first_number_digit_count, numbers = [], max_number = 10, max_sum = 100, use_negative = False, answer_can_be_negative = False):
+def enforce_given_number_first(first_number_digit_count, max_digit_in_multi_digit_number = 8, numbers = [], max_number = 10, max_sum = 100, use_negative = False, answer_can_be_negative = False):
     # if we want the first number to have certain number of digits, then
     # generate those digits now and try to keep enforcement of max sum.
     if (first_number_digit_count > 0):
+        # sanitize input
+        if max_digit_in_multi_digit_number > 9 or max_digit_in_multi_digit_number < 0:
+            max_digit_in_multi_digit_number = 9
+
         prev_first_number = numbers[0]
         new_first_number = 0
         # we'll generate a multi-digit number, but to make sure that max_sum remains
         # enforceable, this new number needs to be less than max_sum and leave at least
         # a value of 1 (better 5) for each of the remaining numbers.
         multi_digit_number_upper_bound = max_sum - 1 * (len(numbers) - 1)
+
+        # likewise is we have a limit on max_digit_in_multi_digit_number, then upper
+        # bound is likely lower.
+        multi_digit_number_upper_bound2 = sum([max_digit_in_multi_digit_number * 10 ** i for i in range(first_number_digit_count)])
+
+        multi_digit_number_upper_bound = min(multi_digit_number_upper_bound, multi_digit_number_upper_bound2)
 
         # and of course the lower bound for multi-digit number must be 10 ^ (first_number_digit_count - 1)
         # so that for example if we want to generate a 3 digit number, then we generate at least 100.
@@ -120,7 +129,7 @@ def enforce_given_number_first(first_number_digit_count, numbers = [], max_numbe
             while new_first_number > multi_digit_number_upper_bound or new_first_number < multi_digit_number_lower_bound:
                 new_first_number = 0
                 for cnt in range(first_number_digit_count):
-                    new_first_number = new_first_number * 10 + gen_non_zero(9, False)
+                    new_first_number = new_first_number * 10 + gen_non_zero(max_digit_in_multi_digit_number, False)
 
             numbers[0] = new_first_number
 
@@ -226,6 +235,7 @@ def gen_abacus(number_of_exercises = 3,
                 max_number = 5,
                 max_sum = 15,
                 first_number_digit_count = 2,
+                max_digit_in_multi_digit_number = 8,
                 buffer_prefill = [],
                 use_negative = True,
                 answer_can_be_negative = False):
@@ -234,6 +244,7 @@ def gen_abacus(number_of_exercises = 3,
                             max_number,
                             max_sum,
                             first_number_digit_count,
+                            max_digit_in_multi_digit_number,
                             buffer_prefill,
                             use_negative,
                             answer_can_be_negative)
@@ -247,12 +258,12 @@ def gen_abacus(number_of_exercises = 3,
 
 
 #print(gen_abacus(3, 2, 4, 4, [], True, False))
-print(gen_abacus(3, 3, 6, 24, 2, [4], True, False))
+print(gen_abacus(3, 3, 6, 24, 2, 8, [4], True, False))
 #print(gen_abacus(3, 3, 5, 15, True, False))
 #print(gen_abacus(3, 5, 7, 25, True, False))
 
 # DONE: Rule : 2-digit number only first
-# in 2 digit number both digits no more than x = [1..9]
+# DONE: in 2 digit number both digits no more than x = [1..9]
 # DONE: one of the numbers must be x
 # both answer digits in a 2 digit number are no more than x
 # DONE: contains x for rules like: +4 = +5 - 1 (for x = 4)
