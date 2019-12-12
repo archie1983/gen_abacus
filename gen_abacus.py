@@ -47,24 +47,61 @@ def gen_numbers(how_many_numbers = 4,
     if max_answer_digit > 9 or max_answer_digit < 0:
         max_answer_digit = 9
 
-    # if max_answer_digit > 0 then we may need to re-calculate max_sum
+    # if max_answer_digit > 0 then that means we want the answer to consist of
+    # carefully bounded digits. We may need to re-calculate max_sum, because for
+    # example if max_sum == 500, but max_answer_digit == 4, then it's immediately
+    # clear that max_sum cannot be greater than 444. And even then we can't allow
+    # numbers like 395 as digits 9 and 5 would violate the rule.
     if max_answer_digit > 0:
-        # first find out the max digit count in max_sum
+        # first find out how many digits we have in max_sum
         max_sum_digit_count = 0
         while 10 ** max_sum_digit_count < max_sum:
             max_sum_digit_count += 1
 
         # now find the most significant number in the max_sum
-        most_significant_number_in_max_sum = m.floor(max_sum / (10 ** (max_sum_digit_count - 1)))
+        most_significant_digit_in_max_sum = m.floor(max_sum / (10 ** (max_sum_digit_count - 1)))
 
-        # max bound of max_sum if we obey max_answer_digit
-        max_bound_of_max_sum_with_digits = sum([max_answer_digit * 10 ** i for i in range(max_sum_digit_count)])
+        # if most_significant_digit_in_max_sum is greater than max_answer_digit,
+        # then we will reduce the most_significant_digit_in_max_sum to be
+        # max_answer_digit. If it is smaller though, then we need to preserve
+        # it so that the resulting max_sum is something 244, instead of 444, when
+        # max_answer_digit == 4 and most_significant_digit_in_max_sum == 2.
+        if most_significant_digit_in_max_sum > max_answer_digit:
+            # max bound of max_sum if we obey max_answer_digit
+            max_bound_of_max_sum_with_digits = sum([max_answer_digit * 10 ** i for i in range(max_sum_digit_count)])
+        else:
+            max_bound_of_max_sum_with_digits = most_significant_digit_in_max_sum * 10 ** (max_sum_digit_count - 1)
+            max_bound_of_max_sum_with_digits += sum([max_answer_digit * 10 ** i for i in range(max_sum_digit_count - 1)])
 
         if max_sum > max_bound_of_max_sum_with_digits:
             max_sum = max_bound_of_max_sum_with_digits
         # Now our max_sum will be something like 444 if max_answer_digit = 4 and initial max_sum was greater than 444.
-        # That still doesn't guarantee that our result will obey max_answer_digit. It could be for instance 349 or 299,
-        # so at the moment only the most significant digit will be strictly obeying max_answer_digit rule.
+        # Or something like 244 if max_sum was only something like 299. But if max_sum was something like 219, then
+        # we now have 219 as max_sum and of course digit 9 clearly violates the max_answer_digit rule.
+        # In other ways too that doesn't guarantee that our result will obey max_answer_digit. It could be for
+        # instance 349 or 299, so at the moment only the most significant digit will be strictly obeying
+        # max_answer_digit rule. Let's fix that.
+
+        # Explanation via an example: Assume that max_sum_digit_count == 3,
+        # so we'll have 100's, 10's and 1's.
+        # In the beginning we have max_sum, which we divide by 100. We get quotient,
+        # which is the current number in max_sum moving from left to right and we
+        # also get remainder, which is what we divide furhter by 10 this time.
+        # That yields us the next current number in max_sum moving from left to
+        # right. And finally we divide the remainder of that division by 1 and that
+        # is our last digit in the max_sum. We can now compare all the digits and make
+        # adjustments.
+        current_digit_in_max_sum = 0
+        remainder_of_max_sum = max_sum
+        new_max_sum = 0
+        for cnt in reversed(range(max_sum_digit_count)):
+            (current_digit_in_max_sum, remainder_of_max_sum) = divmod(remainder_of_max_sum, 10 ** cnt)
+            if current_digit_in_max_sum > max_answer_digit:
+                new_max_sum += max_answer_digit * 10 ** cnt
+            else:
+                new_max_sum += current_digit_in_max_sum * 10 ** cnt
+
+        max_sum = new_max_sum
 
     # if we need to have something prefilled in the buffer (e.g. to force end
     # user to use some abacus formula), then we need to make adjustments to
@@ -84,12 +121,12 @@ def gen_numbers(how_many_numbers = 4,
 
     # now that we have all the necessary numbers, all that's left is to
     # enforce the max_sum constraint.
-    numbers = enforce_max_sum(numbers, max_number, max_sum, use_negative, answer_can_be_negative)
+    numbers = enforce_max_sum(numbers, max_number, max_answer_digit, max_sum, use_negative, answer_can_be_negative)
 
     # if we need a specific first number (of specific digit count), then enforcing that
     # keeping max_sum constraint (the function called will obey max_sum constraint).
     if first_number_digit_count > 0:
-        numbers = enforce_given_number_first(first_number_digit_count, max_digit_in_multi_digit_number, numbers, max_number, max_sum, use_negative, answer_can_be_negative)
+        numbers = enforce_given_number_first(first_number_digit_count, max_digit_in_multi_digit_number, numbers, max_number, max_sum, max_answer_digit, use_negative, answer_can_be_negative)
 
     # if we have to have something in the numbers list, then adding that to the
     # end of the list.
@@ -121,7 +158,7 @@ def enforce_positive_number_first(numbers=[-1,2,3], max_number = 5):
 #
 # Will try to enforce a given first number in the list retaining max_sum constraint.
 #
-def enforce_given_number_first(first_number_digit_count, max_digit_in_multi_digit_number = 8, numbers = [], max_number = 10, max_sum = 100, use_negative = False, answer_can_be_negative = False):
+def enforce_given_number_first(first_number_digit_count, max_digit_in_multi_digit_number = 8, numbers = [], max_number = 10, max_sum = 100, max_answer_digit = 8, use_negative = False, answer_can_be_negative = False):
     # if we want the first number to have certain number of digits, then
     # generate those digits now and try to keep enforcement of max sum.
     if (first_number_digit_count > 0):
@@ -162,17 +199,17 @@ def enforce_given_number_first(first_number_digit_count, max_digit_in_multi_digi
         # The first number is now with the required digit count.
         # Now we need to enforce the max_sum on this new row of numbers.
         max_sum_for_remainder_of_row = max_sum + prev_first_number - new_first_number
-        numbers = numbers[:1] + enforce_max_sum(numbers[1:], max_number, max_sum_for_remainder_of_row, use_negative, answer_can_be_negative)
+        numbers = numbers[:1] + enforce_max_sum(numbers[1:], max_number, max_answer_digit, max_sum_for_remainder_of_row, use_negative, answer_can_be_negative)
     return numbers
 
 #
 # numbers: a row of numbers to optimize
-# max_number : maximum giving us numbers in range [-max_number, max_number]
+# max_number : maximum number giving us numbers in range [-max_number, max_number]
 # max_sum : maximum sum that the generated numbers must add up to
 # use_negative : do we want to use negative numbers
 # answer_can_be_negative : do we want to have exercises with negative answer
 #
-def enforce_max_sum(numbers = [], max_number = 10, max_sum = 100, use_negative = False, answer_can_be_negative = False):
+def enforce_max_sum(numbers = [], max_number = 10, max_answer_digit = 8, max_sum = 100, use_negative = False, answer_can_be_negative = False):
     # first let's establish the minimum bound
     if answer_can_be_negative:
         min_sum = -1 * max_sum
@@ -241,6 +278,74 @@ def enforce_max_sum(numbers = [], max_number = 10, max_sum = 100, use_negative =
                     if to_add == max_number:
                         number_changed = False
 
+    # now all that's left is to enforce max_answer_digit in the answer
+
+
+
+
+
+    # BELOW IS A COPY-PASTE from code above
+    # sanitize input
+    if max_answer_digit > 9 or max_answer_digit < 0:
+        max_answer_digit = 9
+
+    # if max_answer_digit > 0 then that means we want the answer to consist of
+    # carefully bounded digits. We may need to re-calculate max_sum, because for
+    # example if max_sum == 500, but max_answer_digit == 4, then it's immediately
+    # clear that max_sum cannot be greater than 444. And even then we can't allow
+    # numbers like 395 as digits 9 and 5 would violate the rule.
+    if max_answer_digit > 0:
+        # first find out how many digits we have in max_sum
+        max_sum_digit_count = 0
+        while 10 ** max_sum_digit_count < max_sum:
+            max_sum_digit_count += 1
+
+        # now find the most significant number in the max_sum
+        most_significant_digit_in_max_sum = m.floor(max_sum / (10 ** (max_sum_digit_count - 1)))
+
+        # if most_significant_digit_in_max_sum is greater than max_answer_digit,
+        # then we will reduce the most_significant_digit_in_max_sum to be
+        # max_answer_digit. If it is smaller though, then we need to preserve
+        # it so that the resulting max_sum is something 244, instead of 444, when
+        # max_answer_digit == 4 and most_significant_digit_in_max_sum == 2.
+        if most_significant_digit_in_max_sum > max_answer_digit:
+            # max bound of max_sum if we obey max_answer_digit
+            max_bound_of_max_sum_with_digits = sum([max_answer_digit * 10 ** i for i in range(max_sum_digit_count)])
+        else:
+            max_bound_of_max_sum_with_digits = most_significant_digit_in_max_sum * 10 ** (max_sum_digit_count - 1)
+            max_bound_of_max_sum_with_digits += sum([max_answer_digit * 10 ** i for i in range(max_sum_digit_count - 1)])
+
+        if max_sum > max_bound_of_max_sum_with_digits:
+            max_sum = max_bound_of_max_sum_with_digits
+        # Now our max_sum will be something like 444 if max_answer_digit = 4 and initial max_sum was greater than 444.
+        # Or something like 244 if max_sum was only something like 299. But if max_sum was something like 219, then
+        # we now have 219 as max_sum and of course digit 9 clearly violates the max_answer_digit rule.
+        # In other ways too that doesn't guarantee that our result will obey max_answer_digit. It could be for
+        # instance 349 or 299, so at the moment only the most significant digit will be strictly obeying
+        # max_answer_digit rule. Let's fix that.
+
+        # Explanation via an example: Assume that max_sum_digit_count == 3,
+        # so we'll have 100's, 10's and 1's.
+        # In the beginning we have max_sum, which we divide by 100. We get quotient,
+        # which is the current number in max_sum moving from left to right and we
+        # also get remainder, which is what we divide furhter by 10 this time.
+        # That yields us the next current number in max_sum moving from left to
+        # right. And finally we divide the remainder of that division by 1 and that
+        # is our last digit in the max_sum. We can now compare all the digits and make
+        # adjustments.
+        current_digit_in_max_sum = 0
+        remainder_of_max_sum = max_sum
+        new_max_sum = 0
+        for cnt in reversed(range(max_sum_digit_count)):
+            (current_digit_in_max_sum, remainder_of_max_sum) = divmod(remainder_of_max_sum, 10 ** cnt)
+            if current_digit_in_max_sum > max_answer_digit:
+                new_max_sum += max_answer_digit * 10 ** cnt
+            else:
+                new_max_sum += current_digit_in_max_sum * 10 ** cnt
+
+        max_sum = new_max_sum
+
+
     return numbers
 
 def gen_non_zero(max_number, use_negative = False):
@@ -286,7 +391,7 @@ def gen_abacus(number_of_exercises = 3,
 
 
 #print(gen_abacus(3, 2, 4, 4, [], True, False))
-print(gen_abacus(3, 3, 6, 24, 2, 8, [4], True, False))
+print(gen_abacus(3, 3, 200, 299, 2, 4, 4, [4], True, False))
 #print(gen_abacus(3, 3, 5, 15, True, False))
 #print(gen_abacus(3, 5, 7, 25, True, False))
 
