@@ -152,7 +152,17 @@ def enforce_positive_number_first(numbers=[-1,2,3], max_number = 5):
         # if there are no positive numbers at all, then make the first positive
         # and subtract from all others equally
         first_num = gen_non_zero(max_number, False)
+        
+        diff = first_num - numbers[0]
         numbers[0] = first_num
+        
+        cnt = 1
+        while diff > 0:
+            numbers[cnt] -= 1
+            diff -= 1
+            cnt += 1
+            if cnt >= len(numbers): cnt = 1
+        
     return numbers
 
 #
@@ -300,7 +310,7 @@ def enforce_max_sum(numbers = [], max_number = 10, max_answer_digit = 8, max_sum
     # first reduce the sum to comply with the max_sum parameter
     numbers = reduce_sum_of_numbers_by_this(numbers, sum(numbers) - max_sum, use_negative)
     # now get it above the lower bound
-    numbers = enforce_min_sum(numbers, max_number, min_sum):
+    numbers = enforce_min_sum(numbers, max_number, min_sum)
 
     # now all that's left is to enforce max_answer_digit in the answer.
     # So how much are we over if we want to enforce the max_answer_digit?
@@ -331,7 +341,7 @@ def enforce_max_sum(numbers = [], max_number = 10, max_answer_digit = 8, max_sum
 
         # now how much are we over?
         over_by = 0
-        rev_range = reversed(range(cur_sum_digit_count))
+        rev_range = [a for a in reversed(range(cur_sum_digit_count))]
         for cnt in range(cur_sum_digit_count):
             if cur_sum_digits[cnt] > max_answer_digit:
                 over_by += (cur_sum_digits[cnt] - max_answer_digit * 10 ** rev_range[cnt])
@@ -377,14 +387,16 @@ def gen_abacus(number_of_exercises = 3,
         print("-------------------")
 
         for cnt in range(len(numbers)):
-            print numbers[cnt]
+            print(numbers[cnt])
 
         print("-------------------")
         print(sum(numbers))
 
 
 #print(gen_abacus(3, 2, 4, 4, [], True, False))
-print(gen_abacus(3, 3, 200, 299, 2, 4, 4, [4], True, False))
+
+#print(gen_abacus(3, 3, 200, 299, 2, 4, 4, [4], True, False))
+
 #print(gen_abacus(3, 3, 5, 15, True, False))
 #print(gen_abacus(3, 5, 7, 25, True, False))
 
