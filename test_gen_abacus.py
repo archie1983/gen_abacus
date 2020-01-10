@@ -8,6 +8,7 @@ Created on Wed Jan  8 22:24:58 2020
 import unittest
 from gen_abacus import enforce_positive_number_first
 from gen_abacus import enforce_min_sum
+from gen_abacus import enforce_max_sum
 
 class TestGenAbacusMethods(unittest.TestCase):
 
@@ -56,6 +57,53 @@ class TestGenAbacusMethods(unittest.TestCase):
         new_row = enforce_min_sum(old_row, max_number, min_sum)
         self.assertEqual(sum(new_row), min_sum - 1)
         self.assertEqual(len(new_row), len(old_row))
+        
+    def test_enforce_max_sum(self):
+        # first do we do unnecessary work?
+        old_row = [1, 2, 3]
+        max_number = 10
+        max_answer_digit = 8
+        max_sum = 10
+        use_negative = False
+        answer_can_be_negative = False
+        
+        new_row = enforce_max_sum(old_row, 
+                        max_number, 
+                        max_answer_digit, 
+                        max_sum, 
+                        use_negative, 
+                        answer_can_be_negative)
+        
+        self.assertEqual(new_row, old_row)
+        
+        # Do we optimize?
+        max_answer_digit = 8
+        max_sum = 10
+        old_row = [100, 200, -3]
+        new_row = enforce_max_sum(old_row, 
+                        max_number, 
+                        max_answer_digit, 
+                        max_sum, 
+                        use_negative, 
+                        answer_can_be_negative)
+        #print(new_row)
+        self.assertTrue(sum(new_row) <= max_sum)
+        self.assertTrue(sum(new_row) >= 0)
+        # because our max_sum == 10 and max_answer_digit == 8, then the whole
+        # sum should be less or equal to 8
+        self.assertTrue(sum(new_row) <= max_answer_digit)
+        
+        # Now do we optimize with negative answer?
+        answer_can_be_negative = True
+        old_row = [100, -200, -3]        
+        new_row = enforce_max_sum(old_row, 
+                        max_number, 
+                        max_answer_digit, 
+                        max_sum, 
+                        use_negative, 
+                        answer_can_be_negative)
+        self.assertTrue(sum(new_row) <= max_sum)
+        self.assertTrue(sum(new_row) >= -max_sum)
         
     # def test_enforce_given_number_first(self):
     #     first_number_digit_count = 3
