@@ -165,8 +165,16 @@ def enforce_positive_number_first(numbers=[-1,2,3], max_number = 5):
         
     return numbers
 
-#
 # Will try to enforce a given first number in the list retaining max_sum constraint.
+#
+# first_number_digit_count : How many digits we want in the first number
+# max_digit_in_multi_digit_number : what is the maximum digit in the first number
+# numbers : current numbers in the row
+# max_number : 
+# max_sum
+# max_answer_digit
+# use_negative
+# answer_can_be_negative
 #
 def enforce_given_number_first(first_number_digit_count, max_digit_in_multi_digit_number = 8, numbers = [], max_number = 10, max_sum = 100, max_answer_digit = 8, use_negative = False, answer_can_be_negative = False):
     # if we want the first number to have certain number of digits, then
@@ -183,7 +191,7 @@ def enforce_given_number_first(first_number_digit_count, max_digit_in_multi_digi
         # a value of 1 (better 5) for each of the remaining numbers.
         multi_digit_number_upper_bound = max_sum - 1 * (len(numbers) - 1)
 
-        # likewise is we have a limit on max_digit_in_multi_digit_number, then upper
+        # likewise if we have a limit on max_digit_in_multi_digit_number, then upper
         # bound is likely lower.
         multi_digit_number_upper_bound2 = sum([max_digit_in_multi_digit_number * 10 ** i for i in range(first_number_digit_count)])
 
@@ -259,33 +267,44 @@ def reduce_sum_of_numbers_by_this(numbers = [9, 8, 7], reduce_by = 4, use_negati
 
     return numbers
 
+#
 # Enforces that the sum of the given list is more than the given minimum
+# numbers : current numbers
+# max_number : maximum number allowed in the row
+# min_sum : lower bound of the sum of the row of numbers.
 def enforce_min_sum(numbers = [], max_number = 10, min_sum = 5):
+    
+    # control variables so that we don't get stuck in an endless loop.
     row_changed = True
     number_changed = False
-    # now get it above the lower bound
-    while (sum(numbers) < min_sum):
-        # figure out how much is below and add equal share to each number in the row.
-        difference = min_sum - sum(numbers)
-        to_add = m.ceil(difference / len(numbers))
-        for cnt in range(len(numbers)):
+    cnt = 0
+    difference = min_sum - sum(numbers)
+    
+    # while we have difference between actual sum and minimum sum,
+    # increase one number at a time.
+    while difference > 0 and row_changed:
+        if (numbers[cnt] < max_number):            
+            numbers[cnt] += 1
+            difference -= 1
+            number_changed = True
+            
+        cnt += 1
+        # if we reached the end of the row, then start from the beginning,
+        # but only if we're changing anything. If there's been no number change,
+        # then there's been no row change eihter and then we should stop because
+        # the min sum cannot be enforced with the given constraints.
+        if cnt >= len(numbers): 
+            cnt = 0
+            row_changed = number_changed
             number_changed = False
-            # only make changes if difference is still there
-            if difference > 0:
-                numbers[cnt] += to_add
-                difference -= to_add
-                number_changed = True
-                # if we got 0, then continue increasing
-                if numbers[cnt] == 0:
-                    numbers[cnt] += 1
-                    difference -= 1
-                # if we got more than max_number, then adjust
-                if numbers[cnt] > max_number:
-                    difference += numbers[cnt] - max_number
-                    numbers[cnt] = max_number
-                    if to_add == max_number:
-                        number_changed = False
 
+    # There is a chance that the enforcement was not possible. Given the
+    # context of usage of this method, it is not worth raising an exception
+    # and denying the output of this method. The result will already be better
+    # even if full enforcement was not possible. But a warning should be issued.
+    if (difference > 0):
+        print("Could not enforce min sum. Sum is ", difference, " less than needed.")
+        
     return numbers
 
 #
