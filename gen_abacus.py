@@ -165,16 +165,17 @@ def enforce_positive_number_first(numbers=[-1,2,3], max_number = 5):
         
     return numbers
 
+#
 # Will try to enforce a given first number in the list retaining max_sum constraint.
 #
 # first_number_digit_count : How many digits we want in the first number
 # max_digit_in_multi_digit_number : what is the maximum digit in the first number
 # numbers : current numbers in the row
-# max_number : 
-# max_sum
-# max_answer_digit
-# use_negative
-# answer_can_be_negative
+# max_number : maximum number to use
+# max_sum : maximum sum allowed for the whole row
+# max_answer_digit : maximum digit in answer.
+# use_negative : can we use negative numbers?
+# answer_can_be_negative : can answer be negative?
 #
 def enforce_given_number_first(first_number_digit_count, max_digit_in_multi_digit_number = 8, numbers = [], max_number = 10, max_sum = 100, max_answer_digit = 8, use_negative = False, answer_can_be_negative = False):
     # if we want the first number to have certain number of digits, then
@@ -222,20 +223,19 @@ def enforce_given_number_first(first_number_digit_count, max_digit_in_multi_digi
 
 # Reduces the sum of the numbers given in numbers list by the given subtractor
 # For example if we have a list of [9, 8, 7], the sum of which is 24, and
-# we want to reduce that list so that the sum 4 less, then we will end up
+# we want to reduce that list so that the sum is 4 less, then we will end up
 # with something like [7, 7, 6], giving a sum of 20.
 def reduce_sum_of_numbers_by_this(numbers = [9, 8, 7], reduce_by = 4, use_negative = False):
     # To avoid eternal cycles, we'll use these vars.
     row_changed = True
     number_changed = False
 
-    start_sum = sum(numbers)
-    end_sum = start_sum - reduce_by
-    difference = start_sum - end_sum
+    start_sum = sum(numbers) #8
+    end_sum = start_sum - reduce_by # -17
+    difference = reduce_by # 25
 
     while (difference > 0 and row_changed):
-        # figure out how much is over and subtract equal share from each number in the row.
-        difference = sum(numbers) - end_sum
+        row_changed = False
         subtractor = m.ceil(difference / len(numbers))
         for cnt in range(len(numbers)):
             number_changed = False
@@ -244,7 +244,8 @@ def reduce_sum_of_numbers_by_this(numbers = [9, 8, 7], reduce_by = 4, use_negati
             if difference > 0:
                 numbers[cnt] -= subtractor
                 difference -= subtractor
-                number_changed = True
+                number_changed = True # we just changed a number at index cnt.
+                
                 # if we ended up with 0 and are allowed to use negative numbers, then reduce further
                 # but if negative numbers are not allowed, then make it 1 and carry on.
                 if (numbers[cnt] == 0):
@@ -254,6 +255,7 @@ def reduce_sum_of_numbers_by_this(numbers = [9, 8, 7], reduce_by = 4, use_negati
                     else:
                         numbers[cnt] += 1
                         difference += 1
+                        # If subtractor is 1, then we've just restored the row to what was decreased before.
                         if subtractor == 1:
                             number_changed = False
                 else: # but if we ended up less than 0 and are not allowed negative numbers, then restore.
@@ -265,6 +267,11 @@ def reduce_sum_of_numbers_by_this(numbers = [9, 8, 7], reduce_by = 4, use_negati
             if number_changed:
                 row_changed = True
 
+        # figure out how much is over and subtract equal share from each number in the row.
+        difference = sum(numbers) - end_sum
+    if difference > 0:
+        print("Could not reduce sum fully. It is still ", difference, " too high.")
+        
     return numbers
 
 #
@@ -372,8 +379,7 @@ def enforce_max_sum(numbers = [], max_number = 10, max_answer_digit = 8, max_sum
 
 def gen_non_zero(max_number, use_negative = False):
     # We don't normally want to generate 0-es, so if we get one, then
-    # let's re-generate. Also re-generate if this is the last number
-    # and we're over the max_sum
+    # let's re-generate.
     tmp_num = 0
     while tmp_num == 0:
         if use_negative:
