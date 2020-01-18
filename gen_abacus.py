@@ -433,3 +433,37 @@ def gen_abacus(number_of_exercises = 3,
 # only 1 or 2 numbers are negative
 # DONE: first number is positive
 # specify count of double digit numbers
+
+import argparse
+
+parser = argparse.ArgumentParser(description="Abacus exercise generator.")
+parser.add_argument('--number_of_exercises', help='The number of exercises to generate.', type=int, default=3)
+parser.add_argument('--how_many_numbers', help='How many numbers in each exercise.', type=int, default=4)
+parser.add_argument('--max_number', help='Maximum number to add or subtract.', type=int, default=5)
+parser.add_argument('--max_sum', help='Maximum sum for all numbers to add up to.', type=int, default=15)
+parser.add_argument('--first_number_digit_count', help='How many digits in the first number.', type=int, default=2)
+parser.add_argument('--max_digit_in_multi_digit_number', help='Highest digit in the first number.', type=int, default=8)
+parser.add_argument('--max_answer_digit', help='Highest digit in the answer.', type=int, default=8)
+
+parser.add_argument('--buffer_prefill', help='Start with these numbers in the exercise.', type=int, default=[])
+parser.add_argument('--buffer_prefill2', action='append', help='Start with these numbers in the exercise.', required=True)
+
+parser.add_argument('--use_negative', help='Shall we use negative numbers in exercises?', type=bool, default=True)
+parser.add_argument('--answer_can_be_negative', help='Can answer be a negative numbers?', type=int, default=False)
+
+def main():
+    args = parser.parse_args()
+    
+    gen_abacus(args.number_of_exercises,
+                args.how_many_numbers,
+                args.max_number,
+                args.max_sum,
+                args.first_number_digit_count,
+                args.max_digit_in_multi_digit_number,
+                args.max_answer_digit,
+                args.buffer_prefill,
+                args.use_negative,
+                args.answer_can_be_negative)
+
+if __name__ == "__main__":
+    sys.exit(main())
