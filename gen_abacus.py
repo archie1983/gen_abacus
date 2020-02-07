@@ -1,4 +1,5 @@
-#!/usr/bin/python
+#!/home/arturs/anaconda3/envs/abacus/bin/python
+
 
 import random as r
 import copy as c
@@ -389,6 +390,8 @@ def gen_non_zero(max_number, use_negative = False):
             tmp_num = r.randint(1, max_number)
     return tmp_num
 
+import pandas as pd
+
 def gen_abacus(number_of_exercises = 3,
                 how_many_numbers = 4,
                 max_number = 5,
@@ -399,6 +402,10 @@ def gen_abacus(number_of_exercises = 3,
                 buffer_prefill = [],
                 use_negative = True,
                 answer_can_be_negative = False):
+    
+    exercises = {}
+    answers = {}
+    col_names = []
     for i in range(number_of_exercises):
         numbers = gen_numbers(how_many_numbers,
                             max_number,
@@ -416,6 +423,54 @@ def gen_abacus(number_of_exercises = 3,
 
         print("-------------------")
         print(sum(numbers))
+        
+        exercises.update({'Exercise ' + str(i + 1) : numbers})
+        answers.update({'Exercise ' + str(i + 1) : [sum(numbers)]})
+        col_names.append('Exercise ' + str(i + 1))
+        
+        #print(answers)
+    ex_df = pd.DataFrame(exercises)
+    ans_df = pd.DataFrame(answers)
+    
+    #ex_df.set_index("Exercise 1", inplace=True)
+    #ans_df.set_index("Exercise 1", inplace=True)
+    
+    print(ex_df)
+    print(ans_df)
+    #df.to_csv("res.csv")
+    with pd.ExcelWriter('res.xlsx', engine='xlsxwriter') as writer:
+        # Turn off the default header and skip one row to allow us to insert a
+        # user defined header.
+        ex_df.to_excel(writer, sheet_name='Exercises', startrow=1, header=False, index=False)
+        ans_df.to_excel(writer, sheet_name='Answers', index=False)
+
+        # Get the xlsxwriter workbook and worksheet objects.
+        workbook  = writer.book
+        ex_worksheet = writer.sheets['Exercises']
+        ans_worksheet = writer.sheets['Answers']
+        
+        # Add a header format.
+        header_format = workbook.add_format({
+            'bold': True,
+            'text_wrap': True,
+            'valign': 'top',
+            'fg_color': '#D7E4BC',
+            'border': 1})
+        
+        idx = 0
+        # Write the column headers with the defined format.
+        for col_num, value in enumerate(ex_df.columns.values):
+            ex_worksheet.write(0, col_num, value, header_format)
+            ex_worksheet.set_column(idx, idx, 12)
+            ans_worksheet.set_column(idx, idx, 12)
+            idx += 1
+        
+        writer.save()
+        
+        #print(writer.sheets['Exercises'].column_dimensions.)
+        
+        #for ndx in range(len(col_names)):
+        #    writer.sheets['Exercises'].column_dimensions[col_names[ndx]].width = 15
 
 
 #print(gen_abacus(3, 2, 4, 4, [], True, False))
@@ -435,24 +490,46 @@ def gen_abacus(number_of_exercises = 3,
 # specify count of double digit numbers
 
 import argparse
+import sys
+
+def _str_to_bool(s):
+    """Convert string to bool (in argparse context)."""
+    if s.lower() not in ['true', 'false']:
+        raise ValueError('Need bool; got %r' % s)
+    return {'true': True, 'false': False}[s.lower()]
 
 parser = argparse.ArgumentParser(description="Abacus exercise generator.")
 parser.add_argument('--number_of_exercises', help='The number of exercises to generate.', type=int, default=3)
-parser.add_argument('--how_many_numbers', help='How many numbers in each exercise.', type=int, default=4)
+parser.add_argument('-hmn', '--how_many_numbers', help='How many numbers in each exercise.', type=int, default=4)
 parser.add_argument('--max_number', help='Maximum number to add or subtract.', type=int, default=5)
 parser.add_argument('--max_sum', help='Maximum sum for all numbers to add up to.', type=int, default=15)
 parser.add_argument('--first_number_digit_count', help='How many digits in the first number.', type=int, default=2)
 parser.add_argument('--max_digit_in_multi_digit_number', help='Highest digit in the first number.', type=int, default=8)
 parser.add_argument('--max_answer_digit', help='Highest digit in the answer.', type=int, default=8)
 
-parser.add_argument('--buffer_prefill', help='Start with these numbers in the exercise.', type=int, default=[])
-parser.add_argument('--buffer_prefill2', action='append', help='Start with these numbers in the exercise.', required=True)
+parser.add_argument('--buffer_prefill', nargs='*', help='End with these numbers in the exercise.', type=int)
+#parser.add_argument('--buffer_prefill', help='Start with these numbers in the exercise.', type=int, default=[])
+#parser.add_argument('--buffer_prefill2', action='append', help='Start with these numbers in the exercise.', required=True)
 
-parser.add_argument('--use_negative', help='Shall we use negative numbers in exercises?', type=bool, default=True)
-parser.add_argument('--answer_can_be_negative', help='Can answer be a negative numbers?', type=int, default=False)
+#use_negative_feature = parser.add_mutually_exclusive_group(required=False)
+#use_negative_feature.add_argument('--use_negative', nargs='?', help='Shall we use negative numbers in exercises?')
+#use_negative_feature.add_argument('--nouse_negative', dest=use_negative, action='store_false')
+#use_negative_feature.add_argument('--use_negative', help='Shall we use negative numbers in exercises?', dest='use_negative', action='store_true')
+#use_negative_feature.add_argument('--not_use_negative', help='Shall we use negative numbers in exercises?', dest='use_negative', action='store_false')
+#parser.set_defaults(use_negative=False)
+
+parser.add_argument('--use_negative', help='Shall we use negative numbers in exercises?', dest='use_negative', action='store_true')
+parser.add_argument('--answer_can_be_negative', help='Can answer be a negative numbers?', dest='answer_can_be_negative', action='store_true')
 
 def main():
     args = parser.parse_args()
+    
+    print(args.use_negative, " ## ", args.answer_can_be_negative, " ;; ", args.buffer_prefill)
+
+    if args.buffer_prefill == None:
+        buffer_prefill = []
+    else:
+        buffer_prefill = args.buffer_prefill
     
     gen_abacus(args.number_of_exercises,
                 args.how_many_numbers,
@@ -461,7 +538,7 @@ def main():
                 args.first_number_digit_count,
                 args.max_digit_in_multi_digit_number,
                 args.max_answer_digit,
-                args.buffer_prefill,
+                buffer_prefill,
                 args.use_negative,
                 args.answer_can_be_negative)
 
